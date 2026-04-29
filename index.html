@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Strangers</title>
+
+  <!-- Space Mono from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── LOCAL FONT ── */
+    @font-face {
+      font-family: 'ZTFormom';
+      src: url('fonts/ZT Formom.ttf') format('truetype');
+      font-weight: normal;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0a0a;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* ────────────────────────────────────────
+       BACKGROUND LAYERS
+       Two absolutely stacked images.
+       Artboard 2 starts visible (opacity 1).
+       Artboard 3 starts invisible (opacity 0).
+       On first mousemove: swap opacities.
+    ──────────────────────────────────────── */
+    #bg-base,
+    #bg-hover {
+      position: fixed;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: opacity 0.8s ease;
+    }
+
+    /* STATE 1 — default image */
+    #bg-base {
+      background-image: url('images/Artboard 2@4x.png');
+      opacity: 1;
+      z-index: 0;
+    }
+
+    /* STATE 2 — hover image (sits on top, hidden until triggered) */
+    #bg-hover {
+      background-image: url('images/Artboard 3@4x.png');
+      opacity: 0;
+      z-index: 1;
+    }
+
+    /* ────────────────────────────────────────
+       TOP NAVIGATION
+       Revealed on first mousemove.
+    ──────────────────────────────────────── */
+    #top-nav {
+      display: none;
+    }
+
+    /* ────────────────────────────────────────
+       ARROW BUTTON — bottom right
+    ──────────────────────────────────────── */
+    #arrow-btn {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      z-index: 30;
+
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: #c8a84b;
+      border: none;
+      cursor: pointer;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      opacity: 0;
+      transition: opacity 0.6s ease, transform 0.2s ease;
+      pointer-events: none;
+    }
+
+    #arrow-btn.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #arrow-btn:hover {
+      transform: scale(1.08);
+    }
+
+    /* The → arrow inside the button */
+    #arrow-btn span {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0a0a0a;
+      line-height: 1;
+      /* nudge arrow slightly right for optical centering */
+      transform: translateX(2px);
+      display: block;
+    }
+
+    /* ────────────────────────────────────────
+       MUTE BUTTON — bottom left
+       Hidden until audio starts.
+    ──────────────────────────────────────── */
+    #mute-btn {
+      position: fixed;
+      bottom: 32px;
+      left: 32px;
+      z-index: 10;
+
+      background: none;
+      border: none;
+      cursor: pointer;
+
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: #c8a84b;
+      letter-spacing: 0.08em;
+
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+
+    #mute-btn.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #mute-btn:hover {
+      opacity: 0.7;
+    }
+
+    /* ────────────────────────────────────────
+       HOME BUTTON — top left
+       Hidden on homepage, shown once concept section begins.
+    ──────────────────────────────────────── */
+    #home-btn {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      z-index: 50;
+
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      background: #0a0a0a;
+      border: none;
+      cursor: pointer;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #home-btn.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #home-btn:hover {
+      opacity: 0.7;
+    }
+
+    /* ────────────────────────────────────────
+       SECTION 3 — CHARACTER SELECTION
+    ──────────────────────────────────────── */
+    #pick-section {
+      position: fixed;
+      inset: 0;
+      background: #f5c800;
+      z-index: 25;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      overflow: hidden;
+    }
+
+    #pick-section.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* Outer rectangle border inset 40px */
+    #pick-border {
+      position: absolute;
+      inset: 40px;
+      border: 1px solid #0a0a0a;
+      pointer-events: none;
+    }
+
+    /* Inner oval filling most of the rectangle */
+    #pick-oval {
+      position: absolute;
+      left: 80px; right: 80px;
+      top: 60px; bottom: 60px;
+      border: 1px solid #0a0a0a;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* Starbursts at oval cardinal points */
+    .pick-star {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      pointer-events: none;
+    }
+    .pick-star.top    { left: 50%; top: 60px;    transform: translate(-50%, -50%); }
+    .pick-star.bottom { left: 50%; bottom: 60px; transform: translate(-50%, 50%); }
+    .pick-star.left   { left: 80px; top: 50%;   transform: translate(-50%, -50%); }
+    .pick-star.right  { right: 80px; top: 50%;  transform: translate(50%, -50%); }
+
+    /* Selection counter — top right inside border */
+    #pick-counter {
+      position: absolute;
+      top: 56px;
+      right: 56px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: #0a0a0a;
+      z-index: 5;
+    }
+
+    /* Content: prompt + grid, centered inside oval */
+    #pick-content {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    #pick-prompt {
+      font-family: 'ZTFormom', serif;
+      font-size: 28px;
+      color: #0a0a0a;
+      text-align: center;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+    #pick-prompt .red { color: #c0392b; }
+
+    /* 3-column card grid */
+    #pick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 160px);
+      gap: 18px;
+      justify-content: center;
+    }
+
+    /* ── Card base ── */
+    .char-card {
+      width: 160px;
+      height: 110px;
+      background: #0a0a0a;
+      border-radius: 3px;
+      box-shadow: 3px 5px 14px rgba(0,0,0,0.22);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      border: 3px solid transparent;
+      transition: transform 0.3s ease, border-color 0.25s ease, box-shadow 0.3s ease;
+      transform: rotate(var(--rot, 0deg));
+    }
+
+    /* Hover: straighten, lift */
+    .char-card:not(.you-card):hover {
+      transform: rotate(0deg) !important;
+      box-shadow: 4px 8px 20px rgba(0,0,0,0.35);
+    }
+
+    /* Selected: red border, back to tilt */
+    .char-card.selected {
+      border-color: #c0392b;
+    }
+    .char-card.selected:not(:hover) {
+      transform: rotate(var(--rot, 0deg));
+    }
+
+    /* YOU card: not hoverable */
+    .char-card.you-card { cursor: default; }
+
+    /* ── Default face ── */
+    .card-default {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px 12px;
+      transition: opacity 0.25s ease;
+    }
+
+    .card-q {
+      position: absolute;
+      top: 8px; left: 10px;
+      font-family: 'ZTFormom', serif;
+      font-size: 14px;
+      color: #c8a84b;
+      line-height: 1;
+    }
+
+    .card-name {
+      font-family: 'ZTFormom', serif;
+      font-size: 22px;
+      color: #c8a84b;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .card-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    /* ── Hover face ── */
+    .card-hover {
+      position: absolute;
+      inset: 0;
+      padding: 10px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      overflow: hidden;
+    }
+
+    .char-card:not(.you-card):hover .card-default { opacity: 0; }
+    .char-card:not(.you-card):hover .card-hover   { opacity: 1; }
+
+    .card-hover-name {
+      font-family: 'ZTFormom', serif;
+      font-size: 13px;
+      color: #c8a84b;
+      flex-shrink: 0;
+    }
+
+    .card-dialogue {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.55;
+      overflow: hidden;
+    }
+
+    /* ── Selected checkmark ── */
+    .card-check {
+      position: absolute;
+      top: 6px; right: 8px;
+      font-size: 12px;
+      color: #c0392b;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .char-card.selected .card-check { opacity: 1; }
+
+    /* Warning text above arrow */
+    #pick-warning {
+      position: fixed;
+      bottom: 114px;
+      right: 32px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #0a0a0a;
+      text-align: right;
+      line-height: 1.7;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 30;
+    }
+    #pick-warning.show { opacity: 1; }
+
+    /* ────────────────────────────────────────
+       SECTION 3b — CHARACTER INTROS
+    ──────────────────────────────────────── */
+    #intro-section {
+      position: fixed;
+      inset: 0;
+      background: #f5c800;
+      z-index: 22;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      overflow: hidden;
+    }
+    #intro-section.visible { opacity: 1; pointer-events: all; }
+
+    #intro-border {
+      position: absolute;
+      inset: 40px;
+      border: 1px solid #0a0a0a;
+      pointer-events: none;
+    }
+    #intro-oval {
+      position: absolute;
+      left: 80px; right: 80px;
+      top: 60px; bottom: 60px;
+      border: 1px solid #0a0a0a;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .intro-star {
+      position: absolute;
+      width: 50px; height: 50px;
+      pointer-events: none;
+    }
+    .intro-star.top    { left: 50%; top: 60px;    transform: translate(-50%, -50%); }
+    .intro-star.bottom { left: 50%; bottom: 60px; transform: translate(-50%, 50%); }
+    .intro-star.left   { left: 80px; top: 50%;   transform: translate(-50%, -50%); }
+    .intro-star.right  { right: 80px; top: 50%;  transform: translate(50%, -50%); }
+
+    /* Counter top right inside border */
+    #intro-counter {
+      position: absolute;
+      top: 56px; right: 56px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: #0a0a0a;
+      z-index: 5;
+    }
+
+    /* Two-column content, centered inside oval */
+    #intro-content {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 64px;
+      width: min(820px, 68vw);
+      transition: opacity 0.4s ease;
+    }
+
+    /* Left: shape */
+    .intro-left {
+      flex: 0 0 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .intro-shape {
+      animation: shapeFloat 3s ease-in-out infinite;
+      display: block;
+    }
+    @keyframes shapeFloat {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+
+    /* Right: text stack */
+    .intro-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .intro-name {
+      font-family: 'ZTFormom', serif;
+      font-size: 52px;
+      color: #0a0a0a;
+      line-height: 1;
+    }
+    .intro-role {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: #0a0a0a;
+      letter-spacing: 0.06em;
+    }
+    .intro-divider {
+      width: 100%;
+      height: 1px;
+      background: #0a0a0a;
+      opacity: 0.35;
+    }
+    .intro-dialogue {
+      font-family: 'ZTFormom', serif;
+      font-style: italic;
+      font-size: 22px;
+      color: #0a0a0a;
+      max-width: 380px;
+      line-height: 1.6;
+    }
+
+    /* ────────────────────────────────────────
+       SECTION 4 — SIMULATION
+    ──────────────────────────────────────── */
+    #sim-section {
+      position: fixed;
+      inset: 0;
+      background: #f5c800;
+      z-index: 28;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+      overflow: hidden;
+    }
+    #sim-section.visible { opacity: 1; pointer-events: all; }
+
+    #sim-border {
+      position: absolute;
+      inset: 40px;
+      border: 1px solid #0a0a0a;
+      pointer-events: none;
+    }
+    #sim-oval {
+      position: absolute;
+      left: 80px; right: 80px;
+      top: 60px; bottom: 60px;
+      border: 1px solid #0a0a0a;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .sim-star {
+      position: absolute;
+      width: 50px; height: 50px;
+      pointer-events: none;
+    }
+    .sim-star.top    { left: 50%; top: 60px;    transform: translate(-50%, -50%); }
+    .sim-star.bottom { left: 50%; bottom: 60px; transform: translate(-50%, 50%); }
+    .sim-star.left   { left: 80px; top: 50%;   transform: translate(-50%, -50%); }
+    .sim-star.right  { right: 80px; top: 50%;  transform: translate(50%, -50%); }
+
+    /* Centered content column */
+    #sim-content {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Player row */
+    #sim-players {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .sim-player-card {
+      width: 80px; height: 50px;
+      background: #0a0a0a;
+      border-radius: 2px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 4px;
+    }
+    .spc-name {
+      font-family: 'ZTFormom', serif;
+      font-size: 14px;
+      color: #c8a84b;
+      text-align: center;
+      line-height: 1;
+    }
+    .spc-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 7px;
+      color: rgba(255,255,255,0.55);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* Day counter */
+    #sim-day {
+      font-family: 'ZTFormom', serif;
+      font-size: 38px;
+      color: #0a0a0a;
+      text-align: center;
+      line-height: 1;
+    }
+
+    /* Pond SVG wrapper */
+    #sim-pond-wrap { line-height: 0; }
+    #sim-pond-svg { display: block; }
+    #sim-pond-circle { transition: fill 1.5s ease; }
+
+    /* Phase announcement */
+    #sim-phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: #0a0a0a;
+      text-align: center;
+      min-height: 16px;
+      transition: opacity 0.4s ease;
+    }
+
+    /* Fish count */
+    #sim-fish-count {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #0a0a0a;
+      text-align: center;
+    }
+
+    /* Scrolling log */
+    #sim-log {
+      width: 340px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: #0a0a0a;
+      line-height: 1.8;
+      text-align: center;
+      min-height: 88px;
+    }
+    .sim-log-line { transition: opacity 0.4s ease; }
+
+    /* ────────────────────────────────────────
+       ENDING OVERLAY
+    ──────────────────────────────────────── */
+    #sim-end {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      background: #0a0a0a;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.7s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #sim-end.visible { opacity: 1; pointer-events: all; }
+
+    #end-lines {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      max-width: 640px;
+      padding: 0 40px;
+      text-align: center;
+    }
+    .end-line { transition: opacity 0.9s ease; }
+    .end-heading {
+      font-family: 'ZTFormom', serif;
+      font-size: 52px;
+      line-height: 1.1;
+    }
+    .end-body {
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .end-final {
+      font-family: 'ZTFormom', serif;
+      font-style: italic;
+      font-size: 20px;
+      line-height: 1.75;
+      max-width: 560px;
+    }
+    .end-refresh {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+    }
+
+    /* ────────────────────────────────────────
+       SECTION 2 — CONCEPT SLIDES
+       Full viewport overlay, hidden until homepage arrow is clicked.
+    ──────────────────────────────────────── */
+    #concept-section {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+
+    #concept-section.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* ── Slide layers — stacked, crossfade between them ── */
+    .concept-slide {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    .concept-slide.active {
+      opacity: 1;
+    }
+
+    /* ── Progress dots ── */
+    #concept-dots {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      z-index: 30;
+    }
+
+    .concept-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid #0a0a0a;
+      background: transparent;
+      transition: background 0.3s ease;
+    }
+
+    .concept-dot.active {
+      background: #0a0a0a;
+    }
+
+    /* ────────────────────────────────────────
+       INTERROGATION SECTION (z-index 26 — between intros and pick)
+    ──────────────────────────────────────── */
+    #interrogate-section {
+      position: fixed;
+      inset: 0;
+      background: #f5c800;
+      z-index: 26;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      overflow: hidden;
+    }
+    #interrogate-section.visible { opacity: 1; pointer-events: all; }
+
+    #interrogate-border {
+      position: absolute;
+      inset: 40px;
+      border: 1px solid #0a0a0a;
+      pointer-events: none;
+    }
+    #interrogate-oval {
+      position: absolute;
+      left: 80px; right: 80px;
+      top: 60px; bottom: 60px;
+      border: 1px solid #0a0a0a;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .interrogate-star {
+      position: absolute;
+      width: 50px; height: 50px;
+      pointer-events: none;
+    }
+    .interrogate-star.top    { left: 50%; top: 60px;    transform: translate(-50%, -50%); }
+    .interrogate-star.bottom { left: 50%; bottom: 60px; transform: translate(-50%, 50%); }
+    .interrogate-star.left   { left: 80px; top: 50%;   transform: translate(-50%, -50%); }
+    .interrogate-star.right  { right: 80px; top: 50%;  transform: translate(50%, -50%); }
+
+    #interrogate-stranger-counter {
+      position: absolute;
+      top: 56px; right: 56px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: #0a0a0a;
+      z-index: 5;
+    }
+
+    #interrogate-content {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 64px;
+      width: min(820px, 68vw);
+    }
+
+    #interrogate-left {
+      flex: 0 0 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    #interrogate-char-name {
+      font-family: 'ZTFormom', serif;
+      font-size: 48px;
+      color: #0a0a0a;
+      text-align: center;
+      line-height: 1.1;
+    }
+    #interrogate-char-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: rgba(0,0,0,0.6);
+      text-align: center;
+      line-height: 1.4;
+    }
+    #interrogate-shape {
+      animation: shapeFloat 3s ease-in-out infinite;
+    }
+
+    #interrogate-right {
+      flex: 1;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+    }
+    #interrogate-heading {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(0,0,0,0.5);
+      margin-bottom: 16px;
+    }
+    #interrogate-questions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .iq-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(0,0,0,0.25);
+      border-radius: 2px;
+      padding: 14px 18px;
+      text-align: left;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: #0a0a0a;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, opacity 0.2s ease;
+    }
+    .iq-btn:hover:not(.used):not(.exhausted) { background: rgba(0,0,0,0.07); }
+    .iq-btn.used {
+      background: rgba(0,0,0,0.12);
+      border-color: #0a0a0a;
+      cursor: default;
+    }
+    .iq-btn.exhausted {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    #interrogate-answer-panel {
+      min-height: 80px;
+      border-left: 3px solid #0a0a0a;
+      padding-left: 18px;
+      margin-top: 20px;
+      font-family: 'ZTFormom', serif;
+      font-style: italic;
+      font-size: 19px;
+      color: #0a0a0a;
+      line-height: 1.65;
+      transition: opacity 0.5s ease;
+    }
+    #interrogate-remaining {
+      margin-top: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: rgba(0,0,0,0.5);
+    }
+    #interrogate-skip {
+      position: absolute;
+      bottom: 32px;
+      left: 32px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: rgba(0,0,0,0.4);
+      letter-spacing: 0.05em;
+    }
+    #interrogate-skip:hover { color: rgba(0,0,0,0.7); }
+
+    #interrogate-tooltip {
+      position: fixed;
+      bottom: 114px;
+      right: 32px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #0a0a0a;
+      text-align: right;
+      line-height: 1.7;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 30;
+    }
+    #interrogate-tooltip.show { opacity: 1; }
+
+  </style>
+</head>
+<body>
+
+  <!-- ── BACKGROUND LAYERS ── -->
+  <div id="bg-base"></div>
+  <div id="bg-hover"></div>
+
+  <!-- ── TOP NAVIGATION ── -->
+  <nav id="top-nav">
+    <span>A</span>
+    <span>—</span>
+    <span>Tragedy</span>
+    <span>—</span>
+    <span>Of</span>
+    <span>—</span>
+    <span>Commons</span>
+    <span>—</span>
+    <span>Simulation</span>
+  </nav>
+
+  <!-- ── ARROW BUTTON ── -->
+  <button id="arrow-btn" aria-label="Proceed">
+    <span>→</span>
+  </button>
+
+  <!-- ── MUTE BUTTON ── -->
+  <button id="mute-btn" aria-label="Toggle audio">♪ sound off</button>
+
+  <!-- ── HOME BUTTON ── -->
+  <button id="home-btn" aria-label="Return to home">
+    <svg width="20" height="18" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Roof -->
+      <path d="M1 8L10 1L19 8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Walls -->
+      <path d="M3 7V17H17V7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Door -->
+      <rect x="7.5" y="11" width="5" height="6" rx="0.5" stroke="white" stroke-width="1.5"/>
+    </svg>
+  </button>
+
+  <!-- ── SECTION 3: CHARACTER SELECTION ── -->
+  <div id="pick-section">
+
+    <div id="pick-border"></div>
+    <div id="pick-oval"></div>
+
+    <!-- Starbursts at oval cardinal points (8-pointed star) -->
+    <div class="pick-star top">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/>
+      </svg>
+    </div>
+    <div class="pick-star bottom">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/>
+      </svg>
+    </div>
+    <div class="pick-star left">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/>
+      </svg>
+    </div>
+    <div class="pick-star right">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/>
+      </svg>
+    </div>
+
+    <!-- Counter -->
+    <div id="pick-counter">0 / 3 selected</div>
+
+    <!-- Prompt + cards -->
+    <div id="pick-content">
+      <h2 id="pick-prompt">Which <span class="red">3 strangers</span> do you trust with your life.</h2>
+      <div id="pick-grid"><!-- cards injected by JS --></div>
+    </div>
+
+  </div>
+
+  <!-- Warning text above arrow — visible when 3 selected -->
+  <div id="pick-warning">Are you sure?<br>You cannot change your mind.</div>
+
+  <!-- ── SECTION 3b: CHARACTER INTROS ── -->
+  <div id="intro-section">
+
+    <div id="intro-border"></div>
+    <div id="intro-oval"></div>
+
+    <div class="intro-star top">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="intro-star bottom">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="intro-star left">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="intro-star right">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+
+    <div id="intro-counter">1 / 9</div>
+
+    <div id="intro-content">
+      <div class="intro-left">
+        <div class="intro-shape" id="intro-shape-wrap"></div>
+      </div>
+      <div class="intro-right">
+        <div class="intro-name"  id="intro-name"></div>
+        <div class="intro-role"  id="intro-role"></div>
+        <div class="intro-divider"></div>
+        <div class="intro-dialogue" id="intro-dialogue"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── SECTION 3c: INTERROGATION ── -->
+  <div id="interrogate-section">
+
+    <div id="interrogate-border"></div>
+    <div id="interrogate-oval"></div>
+
+    <div class="interrogate-star top">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="interrogate-star bottom">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="interrogate-star left">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="interrogate-star right">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+
+    <div id="interrogate-stranger-counter">STRANGER 1 / 9</div>
+
+    <div id="interrogate-content">
+      <div id="interrogate-left">
+        <div id="interrogate-char-name"></div>
+        <div id="interrogate-char-label"></div>
+        <div id="interrogate-shape">
+          <svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="#0a0a0a" stroke-width="1.5"/></svg>
+        </div>
+      </div>
+      <div id="interrogate-right">
+        <div id="interrogate-heading">YOU HAVE 3 QUESTIONS. CHOOSE CAREFULLY.</div>
+        <div id="interrogate-questions"><!-- built by JS --></div>
+        <div id="interrogate-answer-panel"></div>
+        <div id="interrogate-remaining">3 questions remaining</div>
+      </div>
+    </div>
+
+    <button id="interrogate-skip">SKIP ALL →</button>
+
+  </div>
+
+  <!-- Interrogate arrow tooltip -->
+  <div id="interrogate-tooltip">Next stranger →</div>
+
+  <!-- ── SECTION 4: SIMULATION ── -->
+  <div id="sim-section">
+
+    <div id="sim-border"></div>
+    <div id="sim-oval"></div>
+
+    <div class="sim-star top">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="sim-star bottom">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="sim-star left">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+    <div class="sim-star right">
+      <svg width="50" height="50" viewBox="0 0 50 50" fill="#0a0a0a"><polygon points="25,0 28.83,15.76 42.68,7.32 34.24,21.17 50,25 34.24,28.83 42.68,42.68 28.83,34.24 25,50 21.17,34.24 7.32,42.68 15.76,28.83 0,25 15.76,21.17 7.32,7.32 21.17,15.76"/></svg>
+    </div>
+
+    <div id="sim-content">
+      <div id="sim-players"></div>
+      <div id="sim-day">Day 1</div>
+      <div id="sim-pond-wrap">
+        <svg id="sim-pond-svg" width="280" height="280" viewBox="0 0 280 280">
+          <circle id="sim-pond-circle" cx="140" cy="140" r="138"
+                  stroke="#0a0a0a" stroke-width="1" fill="transparent"/>
+          <!-- Fish dots appended by JS -->
+        </svg>
+      </div>
+      <div id="sim-phase"></div>
+      <div id="sim-fish-count">12 fish remaining</div>
+      <div id="sim-log"></div>
+    </div>
+
+  </div>
+
+  <!-- ── ENDING OVERLAY ── -->
+  <div id="sim-end">
+    <div id="end-lines"></div>
+  </div>
+
+  <!-- ── SECTION 2: CONCEPT SLIDES ── -->
+  <div id="concept-section">
+
+    <!-- 5 slide layers — only one is .active at a time -->
+    <div class="concept-slide" style="background-image: url('images/Artboard 4@4x.png')"></div>
+    <div class="concept-slide" style="background-image: url('images/Artboard 5@4x.png')"></div>
+    <div class="concept-slide" style="background-image: url('images/Artboard 6@4x.png')"></div>
+    <div class="concept-slide" style="background-image: url('images/Artboard 7@4x.png')"></div>
+    <div class="concept-slide" style="background-image: url('images/Artboard 8@4x.png')"></div>
+
+    <!-- Progress dots -->
+    <div id="concept-dots">
+      <div class="concept-dot active"></div>
+      <div class="concept-dot"></div>
+      <div class="concept-dot"></div>
+      <div class="concept-dot"></div>
+      <div class="concept-dot"></div>
+    </div>
+
+  </div>
+
+  <!-- ── AUDIO ── -->
+  <audio id="bg-audio" src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3" loop preload="auto"></audio>
+
+  <script>
+    /* ────────────────────────────────────────
+       STATE FLAGS
+    ──────────────────────────────────────── */
+    let hasTransitioned    = false; // visual transition fires exactly once
+    let audioStarted       = false; // audio starts only on arrow click
+    let audioMuted         = false;
+    let inPickMode         = false; // true once character selection section is active
+    let inIntroMode        = false; // true during character intro sequence
+    let introIndex         = 0;    // which intro card is showing
+    let inInterrogateMode  = false; // true during interrogation sequence
+
+    const interrogateState = {
+      strangerIndex: 0,
+      questionsAsked: [], // array of 9 arrays — which question indices asked per stranger
+      answersGiven:   []  // array of 9 arrays — same tracking for answers
+    };
+
+    const bgHover  = document.getElementById('bg-hover');
+    const topNav   = document.getElementById('top-nav');
+    const arrowBtn = document.getElementById('arrow-btn');
+    const muteBtn  = document.getElementById('mute-btn');
+    const audio    = document.getElementById('bg-audio');
+
+    /* ────────────────────────────────────────
+       FIRST MOUSEMOVE → visual transition only (STATE 1 → STATE 2)
+       Audio does NOT start here — browsers block mousemove autoplay.
+    ──────────────────────────────────────── */
+    function onFirstMove() {
+      // Bug 1 & 3 fix: hard guard so this block runs exactly once
+      if (hasTransitioned) return;
+      hasTransitioned = true;
+
+      // Remove listener immediately to prevent any further calls
+      document.removeEventListener('mousemove', onFirstMove);
+
+      // Crossfade background image
+      bgHover.style.opacity = '1';
+
+      // Crossfade nav (no audio, no arrow here)
+      topNav.classList.add('show');
+      arrowBtn.classList.add('show');
+    }
+
+    function handleFirstMove() {
+      onFirstMove();
+      document.removeEventListener('mousemove', handleFirstMove);
+    }
+    document.addEventListener('mousemove', handleFirstMove);
+
+    /* ────────────────────────────────────────
+       CLICK SOUND
+       New Audio instance each time so rapid clicks stack.
+    ──────────────────────────────────────── */
+    function playClick() {
+      if (audioMuted) return;
+      const s = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+      s.volume = 0.5;
+      s.play().catch(() => {});
+    }
+
+    /* ────────────────────────────────────────
+       AUDIO FADE UTILITY
+       Smoothly ramps volume from current → target over `ms` milliseconds.
+    ──────────────────────────────────────── */
+    function fadeAudioIn(audioEl, targetVol, ms) {
+      const steps    = 40;
+      const interval = ms / steps;
+      const delta    = (targetVol - audioEl.volume) / steps;
+      let count = 0;
+
+      const timer = setInterval(() => {
+        count++;
+        audioEl.volume = Math.min(Math.max(audioEl.volume + delta, 0), 1);
+        if (count >= steps) clearInterval(timer);
+      }, interval);
+    }
+
+    /* ────────────────────────────────────────
+       MUTE TOGGLE
+    ──────────────────────────────────────── */
+    muteBtn.addEventListener('click', () => {
+      playClick();
+      audioMuted = !audioMuted;
+      audio.muted = audioMuted;
+      muteBtn.textContent = audioMuted ? '♪ sound on' : '♪ sound off';
+    });
+
+    /* ────────────────────────────────────────
+       CHARACTER SELECTION — DATA
+    ──────────────────────────────────────── */
+    const INTERROGATION_QUESTIONS = [
+      "What do you do when there's not enough for everyone?",
+      "Have you ever taken more than your share of something?",
+      "Do you think most people are basically good?",
+      "What would you do if nobody was watching?",
+      "Tell me about a time you had to choose between yourself and someone else.",
+      "Do you think the system is fair?"
+    ];
+
+    const ALL_CHARACTERS = [
+      { id: 'rajan', name: 'Rajan', label: 'Construction Worker, Bihar', type: 'pure',
+        dialogue: 'I have built half this city with my hands. I know what it means to take only what you need. You have my word — one fish, every day.',
+        answers: [
+          "You take care of yourself and your family first. That's it. I have forty-three workers, loans, a mother who needs medical care. When there's not enough I make sure mine are covered. After that I can worry about everyone else.",
+          "Yes. In business you take what the contract allows and sometimes a bit more if the other side isn't watching. I didn't make those rules. I operate in the world as it is, not as it should be.",
+          "No. Some are, many aren't. I've been in business long enough to see what happens when you trust people. You verify. You protect. You don't assume goodness because the ones who assume goodness get taken.",
+          "Same things. Maybe a little more. I don't lose sleep over it. When nobody's watching is when you see what people actually value. Most people value themselves. I'm one of them. I'm just honest about it.",
+          "I had a contract that would have set me up for five years. Another supplier — small guy, family operation — underbid me. I lowered my price below cost, killed the deal for him, then raised my prices back. He went under. I needed that contract. I'm not proud of it.",
+          "For people like me, it used to be. Now? The big players have networks I can't access. The small guys undercut me on labour. I'm stuck in the middle and the system doesn't care. So I do what I have to do."
+        ]
+      },
+      { id: 'aaji', name: 'Aaji', label: 'Grandmother, Pune', type: 'pure',
+        dialogue: 'Beta, I have fed eight people on nothing. I know exactly how much is enough. I have never taken more than my share in 70 years.',
+        answers: [
+          "In my day you managed. You made do. People these days expect too much. When I was young we had nothing and we were fine. You adjust. You take what you need and you don't complain.",
+          "I've taken what I was entitled to. My pension, my benefits, my dues — I worked forty years. If that's more than my share, then I don't know what the word means anymore. I earned it. Every bit.",
+          "Some are, some aren't. Mostly aren't, in my experience. People are selfish — I've seen it all my life. You protect yourself and your family. Anyone who says differently is fooling themselves.",
+          "The same. What do you think I'd do differently? At my age you don't have the energy to be two different people.",
+          "My son wanted to move to Canada. Good job offer. I told him — you go, and I'm alone here. He stayed. He missed that opportunity. I needed him. Family comes first. That's how it's always been.",
+          "For people like me, no. We did everything right — studied, worked, followed the rules — and still you see these young ones with their startups getting crores while I count my pension. The system rewards the wrong things now."
+        ]
+      },
+      { id: 'meera', name: 'Meera', label: 'Schoolteacher, Nagpur', type: 'pure',
+        dialogue: 'I teach children that rules exist for everyone equally. How could I not follow them myself? One fish. Every day. That is the agreement.',
+        answers: [
+          "You share what you have and figure it out together. That's it. I've seen this in classrooms — the kids who hoard end up with a mess, and the ones who share always have enough.",
+          "I'm sure I have, without realising. That's what makes it hard — you don't always know when you're doing it. I ask my students: are you taking or are you sharing? I ask myself that too.",
+          "Yes. Not perfectly good, but basically good — they want to do right if you make it easy for them. Most people don't want to hurt others. They just sometimes don't think through what their choices cost everyone else.",
+          "The same things I do when people are watching. I don't know how to be different in private. Maybe that's boring but it's the truth.",
+          "My husband got very sick. My sister wanted me to leave my job, come stay with her. It was easier, safer. But I kept teaching. My students needed me more than I needed to be comfortable. I don't regret it.",
+          "For some people, no. Not even close. I see it every day — children who start three steps behind and the system calls it a fair race. But I don't think it helps to be angry. You change what you can from where you stand."
+        ]
+      },
+      { id: 'priya', name: 'Priya', label: 'SoBo Girl, Mumbai', type: 'cheat',
+        dialogue: 'Honestly? I think we are all overthinking this. There are plenty of fish, we are reasonable adults. I am not greedy — I just do not stress about these things.',
+        answers: [
+          "You fight for systemic change so there IS enough for everyone. The scarcity is manufactured — that's what people don't understand. The commons doesn't fail on its own — it's extracted by power.",
+          "No. I've been careful about this — I'm very aware of privilege and position. If anything I've taken less than I could have because I know what it costs others. My colleagues think I'm difficult. I'm okay with that.",
+          "Yes. People are basically good. What makes them act badly is bad systems, desperation, and the normalization of taking. If you change the context, you change the behavior. I've seen this in my reporting.",
+          "The same. More so, actually — when nobody's watching is when you find out who you actually are. I'd still be writing the same stories, caring about the same things. I'm not performing.",
+          "I had a chance at a position at a big international outlet. More money, safer conditions. I turned it down to stay on a story about displaced farmers in Vidarbha. They needed that story told. Some choices aren't really choices.",
+          "Obviously not. That's what I write about every single day. The system is designed to look fair while being structurally rigged. Anyone who thinks it's fair either benefits enormously or hasn't looked closely enough."
+        ]
+      },
+      { id: 'arjun', name: 'Arjun', label: 'Delivery Boy, Dharavi', type: 'cheat',
+        dialogue: 'I know what it is like to go without. I would never take from someone else. One fish is enough. It always has been.',
+        answers: [
+          "You find efficiencies. Scarcity is usually a distribution problem, not an actual shortage problem. When people think there isn't enough, they hoard. But if you design the system right, there's almost always enough. You just have to be smart about it.",
+          "Ha. Define share, right? I've always taken what the situation allowed. I never felt like I was taking from someone else — I was just moving faster than them.",
+          "I think most people are basically rational. Which is better than good — good is unreliable, rational is predictable. If you build systems that align incentives correctly, rational people produce good outcomes. That's the whole game.",
+          "Genuinely the same things. I don't perform goodness, I just do what makes sense. The watching never really factored into how I operate.",
+          "Early days of my startup I had to let go of a cofounder. Really close friend. The company needed it — he wasn't scaling with us. It was brutal but it was right. I chose the mission over the relationship. I'd do it again.",
+          "Fair is a child's word. The system rewards certain behaviors and punishes others. I learned the rewards early. Is that fair to people who didn't? Probably not. But I didn't design the game."
+        ]
+      },
+      { id: 'vikram', name: 'Vikram', label: 'IT Guy, Pune', type: 'cheat',
+        dialogue: 'I have modelled this mathematically. If three people take one fish and one takes slightly more, the pond still recovers. The system is robust. I am not worried.',
+        answers: [
+          "I mean... figure it out? People manage. I don't really think about it that much. Usually there's enough if you're organised. If there isn't, whoever gets there first gets it, right? That's kind of how it works.",
+          "Probably, yeah. I don't keep track. I take what's available. I don't think most people consciously track this stuff.",
+          "Yeah, mostly. I mean people do bad things but that's usually because of circumstances. On a basic level most people are just trying to get through the day. Like me.",
+          "The same things. Maybe a bit more Netflix. I don't really have a dramatic answer for this one.",
+          "My parents wanted me to come back to Chennai after my MBA. I stayed in Bangalore another three years for the job. I feel bad about it but the opportunity was real. Eventually I moved back. It worked out.",
+          "I don't really think about the system that much. It is what it is. Some things are fair some aren't. I've been lucky, I guess. I try not to overthink it."
+        ]
+      },
+      { id: 'sneha', name: 'Sneha', label: 'NGO Worker, Bangalore', type: 'cheat',
+        dialogue: 'I have spent my whole career fighting for equity. The whole point is everyone gets their fair share. I believe in this more than anyone in this room.',
+        answers: [
+          "You work collectively to address the root cause of the scarcity, not just the symptom. We don't believe in charity, we believe in systemic solutions. Giving people fish versus teaching them to fish — though even that metaphor is problematic. Who owns the pond?",
+          "Not intentionally, no. I'm very conscious of this. I fly business for long hauls but I offset everything. We have to be conscious actors in the system we're trying to change.",
+          "Fundamentally yes, with the right support structures. I've worked in communities the world has given up on and I've seen extraordinary generosity. Human nature isn't the problem — extractive systems are.",
+          "Probably more of the same work. If anything I'm more myself when nobody's watching — I find the performance of institutional life quite exhausting. The real work happens quietly.",
+          "I left a very well-funded research position to start this work. Everyone thought I was crazy — stable salary, international travel, publications. I chose impact over comfort. I still struggle sometimes with whether I'm making a big enough difference.",
+          "No, but I hold onto the belief that it can be made fairer through sustained collective action. Cynicism is a luxury we can't afford. Every time I think the system is irredeemably broken I go back to the communities we work with."
+        ]
+      },
+      { id: 'rohan', name: 'Rohan', label: 'Student, Patna', type: 'cheat',
+        dialogue: 'I have never had enough of anything my whole life. Now there is a system that promises everyone gets equal. I will follow the rule. I need this to work.',
+        answers: [
+          "You enforce limits. You have to. People don't restrain themselves voluntarily — history shows this clearly. You need rules, consequences, and people willing to call out violations even when it's uncomfortable. Without that, everyone takes more and the whole thing falls apart.",
+          "No. I genuinely believe if you think carefully about systems you start to see your own extraction clearly. I try to live by that. I'm not always popular for it.",
+          "I think most people are basically self-interested, which doesn't mean bad — it means they need the right structures. You can't build systems assuming goodness. You build them assuming self-interest and design accordingly.",
+          "Nothing different. The question assumes there's a gap between public and private behavior. I try not to have that gap. It's exhausting to maintain two versions of yourself.",
+          "I had a very close friend who asked me not to publish something I'd written because it implicated someone in his family. I published it. We didn't speak for two years. The work was more important. The relationship recovered. I didn't compromise.",
+          "No. Obviously not. The question is what you do about it — complain and feel superior, or actually work to change the structures. I chose the second one. That's why people find me annoying."
+        ]
+      },
+      { id: 'kabir', name: 'Kabir', label: 'Teenager, Lucknow', type: 'cheat',
+        dialogue: 'I have learned to not take up too much space. One fish is more than I am used to having guaranteed. I will follow the rule — I always follow the rules.',
+        answers: [
+          "Depends on why. If it's artificial scarcity — manufactured by power — you take what you need and you don't apologize. If it's genuine scarcity, you coordinate. But I'm not going to preach restraint to people who've been restrained their whole lives while others took everything.",
+          "From a system that was taking from me first? Yes, and I'd do it again. I don't apply commons ethics symmetrically to asymmetric situations. That's how oppression sustains itself.",
+          "I think most people are basically scared. Which leads to both good and bad things. What they are depends almost entirely on what the people around them are doing.",
+          "The same. Angrier, maybe. I don't really perform calm — it's more that I choose my battles in public. In private I'm not choosing.",
+          "There was a protest last year. I knew if I organised it, certain people in my family would face consequences — professional, social. I organised it anyway. They faced the consequences. We're still working through it. I think I was right. I'm not sure I had the right to make that choice for them.",
+          "No. Not even in theory right now. When a system is fundamentally extractive, talking about fairness inside it is just rearranging furniture. Sometimes I think the only honest answer is to burn the furniture."
+        ]
+      },
+      { id: 'savitri', name: 'Savitri', label: 'Mother, Ahmedabad', type: 'cheat',
+        dialogue: 'God has always provided for my family. I pray every morning. I give to the temple every week. I am not a selfish person — my faith would not allow it.',
+        answers: [
+          "You pray and you trust that God provides. I know that sounds simple but I have seen it work my whole life. When we share what little we have, it always stretches further than it should. That's not luck. That's faith.",
+          "In the eyes of God, no. In the eyes of the world, maybe others would say so. I give to the temple, I give to my neighbours. What I take, I take because my family needs it. I don't think that's greed.",
+          "Yes. Deeply. I have never met a person who was bad at their core. Circumstances make people do bad things. Remove the circumstances, give people dignity, and they will almost always choose good.",
+          "The same. I live the same life whether anyone is watching or not. My husband used to joke that I behave better when nobody's watching than when they are. He wasn't wrong.",
+          "When my youngest was sick and money was very short, a neighbour offered to lend us money. I almost said yes. Then I saw how strained they were too. I said no. We managed somehow. I'm glad I said no. Some things you don't take.",
+          "In this world, no. I have made peace with that. I believe in a justice that goes beyond this world. But here — no. The people who work hardest are not the ones who get the most. That has never been how it works."
+        ]
+      }
+    ];
+
+    /* Fisher-Yates shuffle */
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    /* 9 strangers picked fresh each session */
+    const SESSION_STRANGERS = shuffle(ALL_CHARACTERS).slice(0, 9);
+
+    /* ────────────────────────────────────────
+       CHARACTER SELECTION — STATE & RENDER
+    ──────────────────────────────────────── */
+    const pickSection = document.getElementById('pick-section');
+    const pickGrid    = document.getElementById('pick-grid');
+    const pickCounter = document.getElementById('pick-counter');
+    const pickWarning = document.getElementById('pick-warning');
+    let selectedIds   = [];
+
+    function updateCounter() {
+      pickCounter.textContent = `${selectedIds.length} / 3 selected`;
+      if (selectedIds.length === 3) {
+        arrowBtn.classList.add('show');
+        pickWarning.classList.add('show');
+      } else {
+        arrowBtn.classList.remove('show');
+        pickWarning.classList.remove('show');
+      }
+    }
+
+    /* Build a stranger card element */
+    function createCard(char) {
+      const rot  = (Math.random() * 8 - 4).toFixed(2);
+      const card = document.createElement('div');
+      card.className = 'char-card';
+      card.style.setProperty('--rot', rot + 'deg');
+      card.dataset.id = char.id;
+
+      card.innerHTML = `
+        <div class="card-default">
+          <span class="card-q">?</span>
+          <span class="card-name">${char.name}</span>
+          <span class="card-label">${char.label}</span>
+        </div>
+        <div class="card-hover">
+          <span class="card-hover-name">${char.name}</span>
+          <p class="card-dialogue">${char.dialogue}</p>
+        </div>
+        <span class="card-check">✓</span>
+      `;
+
+      card.addEventListener('click', () => {
+        playClick();
+        if (card.classList.contains('selected')) {
+          card.classList.remove('selected');
+          selectedIds = selectedIds.filter(x => x !== char.id);
+        } else if (selectedIds.length < 3) {
+          card.classList.add('selected');
+          selectedIds.push(char.id);
+        }
+        updateCounter();
+      });
+
+      return card;
+    }
+
+    /* Build the YOU card (non-selectable) */
+    function createYouCard() {
+      const rot  = (Math.random() * 6 - 3).toFixed(2);
+      const card = document.createElement('div');
+      card.className = 'char-card you-card';
+      card.style.setProperty('--rot', rot + 'deg');
+      card.innerHTML = `
+        <div class="card-default">
+          <span class="card-name" style="font-size:30px">YOU</span>
+        </div>
+      `;
+      return card;
+    }
+
+    function renderPickGrid() {
+      pickGrid.innerHTML = '';
+      pickGrid.appendChild(createYouCard());
+      SESSION_STRANGERS.forEach(char => pickGrid.appendChild(createCard(char)));
+    }
+
+    /* Enter character selection section */
+    function enterPickSection() {
+      inPickMode  = true;
+      selectedIds = [];
+
+      // Hide concept section underneath
+      conceptSection.classList.remove('visible');
+
+      // Reset counter and arrow
+      updateCounter();
+
+      // Render fresh cards
+      renderPickGrid();
+
+      // Fade in pick section
+      pickSection.classList.add('visible');
+    }
+
+    /* ────────────────────────────────────────
+       CONCEPT SLIDES — state
+    ──────────────────────────────────────── */
+    const conceptSection = document.getElementById('concept-section');
+    const conceptSlides  = document.querySelectorAll('.concept-slide');
+    const conceptDots    = document.querySelectorAll('.concept-dot');
+    const TOTAL_SLIDES   = 5;
+    const AUTO_DELAY     = 3500; // ms before auto-advance
+
+    let currentSlide  = 0;
+    let autoTimer     = null;
+    let inConceptMode = false;
+
+    /* Go to a specific slide index */
+    function goToSlide(index) {
+      // Deactivate current
+      conceptSlides[currentSlide].classList.remove('active');
+      conceptDots[currentSlide].classList.remove('active');
+
+      currentSlide = index;
+
+      // Activate new
+      conceptSlides[currentSlide].classList.add('active');
+      conceptDots[currentSlide].classList.add('active');
+    }
+
+    /* Advance to next slide. On last slide, do nothing (wait for user). */
+    function advanceSlide() {
+      if (currentSlide < TOTAL_SLIDES - 1) {
+        goToSlide(currentSlide + 1);
+        // Schedule next auto-advance only if not on last slide after this
+        if (currentSlide < TOTAL_SLIDES - 1) {
+          autoTimer = setTimeout(advanceSlide, AUTO_DELAY);
+        } 
+      }
+    }
+
+    const homeBtn = document.getElementById('home-btn');
+
+    /* Home button click — fade everything out then reload */
+    homeBtn.addEventListener('click', () => {
+      playClick();
+      document.body.style.transition = 'opacity 0.4s ease';
+      document.body.style.opacity = '0';
+      setTimeout(() => window.location.reload(), 400);
+    });
+
+    /* Enter concept section — fade homepage out, slides in */
+    function enterConceptSection() {
+      inConceptMode = true;
+
+      // Fade out homepage layers
+      document.getElementById('bg-base').style.opacity = '0';
+      document.getElementById('bg-hover').style.opacity = '0';
+      document.getElementById('top-nav').style.opacity = '0';
+
+      // Activate first slide immediately
+      conceptSlides[0].classList.add('active');
+
+      // Fade in concept section
+      conceptSection.classList.add('visible');
+
+      // Show home button now that we've left the homepage
+      homeBtn.classList.add('show');
+
+      // Start auto-advance timer
+      autoTimer = setTimeout(advanceSlide, AUTO_DELAY);
+    }
+
+    /* ────────────────────────────────────────
+       ARROW BUTTON
+       First click from homepage: start audio + enter concept section.
+       In concept mode: manual slide advance or proceed to intros on last slide.
+    ──────────────────────────────────────── */
+
+    /* ════════════════════════════════════════════
+       CHARACTER INTRO ENGINE
+    ════════════════════════════════════════════ */
+
+    const introSection  = document.getElementById('intro-section');
+    const introContent  = document.getElementById('intro-content');
+    const introCounter  = document.getElementById('intro-counter');
+    const introShapeWrap= document.getElementById('intro-shape-wrap');
+    const introNameEl   = document.getElementById('intro-name');
+    const introRoleEl   = document.getElementById('intro-role');
+    const introDlgEl    = document.getElementById('intro-dialogue');
+
+    /* ── Shape SVGs — black, 180×180 viewBox ── */
+    function shapeSVG(id) {
+      const f = '#0a0a0a';
+      switch (id) {
+        case 'rajan':   // circle
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="82" fill="${f}"/></svg>`;
+        case 'aaji':    // pentagon
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><polygon points="90,7 169,64 139,157 41,157 11,64" fill="${f}"/></svg>`;
+        case 'meera':   // hexagon
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><polygon points="90,7 162,49 162,131 90,173 18,131 18,49" fill="${f}"/></svg>`;
+        case 'priya':   // diamond (rotated square)
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><polygon points="90,8 172,90 90,172 8,90" fill="${f}"/></svg>`;
+        case 'arjun':   // triangle
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><polygon points="90,8 169,160 11,160" fill="${f}"/></svg>`;
+        case 'vikram':  // square
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><rect x="10" y="10" width="160" height="160" fill="${f}"/></svg>`;
+        case 'sneha':   // octagon
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><polygon points="122,13 167,58 167,122 122,167 58,167 13,122 13,58 58,13" fill="${f}"/></svg>`;
+        case 'rohan':   // 6-pointed star
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><polygon points="90,8 110,55 161,49 130,90 161,131 110,125 90,172 70,125 19,131 50,90 19,49 70,55" fill="${f}"/></svg>`;
+        case 'kabir':   // crescent
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><defs><mask id="crescent-mask"><rect width="180" height="180" fill="white"/><circle cx="122" cy="68" r="74" fill="black"/></mask></defs><circle cx="86" cy="90" r="80" fill="${f}" mask="url(#crescent-mask)"/></svg>`;
+        case 'savitri': // plus / cross
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><rect x="10" y="67" width="160" height="46" fill="${f}"/><rect x="67" y="10" width="46" height="160" fill="${f}"/></svg>`;
+        default:
+          return `<svg width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="82" fill="${f}"/></svg>`;
+      }
+    }
+
+    /* ── Render one intro card ── */
+    function renderIntroCard(char, index) {
+      introCounter.textContent = `${index + 1} / ${SESSION_STRANGERS.length}`;
+      introShapeWrap.innerHTML = shapeSVG(char.id);
+      introNameEl.textContent  = char.name;
+      introRoleEl.textContent  = char.label;
+      introDlgEl.textContent   = char.dialogue;
+    }
+
+    /* ── Show intro card, with optional crossfade ── */
+    function showIntroCard(index, animate) {
+      if (animate) {
+        introContent.style.opacity = '0';
+        setTimeout(() => {
+          renderIntroCard(SESSION_STRANGERS[index], index);
+          introContent.style.opacity = '1';
+        }, 200);
+      } else {
+        renderIntroCard(SESSION_STRANGERS[index], index);
+        introContent.style.opacity = '1';
+      }
+    }
+
+    /* ── Enter intro section (called from last concept slide) ── */
+    function enterIntroSection() {
+      inIntroMode = true;
+      introIndex  = 0;
+
+      conceptSection.classList.remove('visible');
+      introSection.classList.add('visible');
+      showIntroCard(0, false);
+    }
+
+    /* ════════════════════════════════════════════
+       INTERROGATION ENGINE
+    ════════════════════════════════════════════ */
+
+    const interrogateSection  = document.getElementById('interrogate-section');
+    const interrogateTooltip  = document.getElementById('interrogate-tooltip');
+
+    function renderInterrogateStranger(index) {
+      const stranger  = SESSION_STRANGERS[index];
+      const asked     = interrogateState.questionsAsked[index];
+      const usedCount = asked.length;
+      const leftCount = 3 - usedCount;
+
+      document.getElementById('interrogate-stranger-counter').textContent = `STRANGER ${index + 1} / 9`;
+      document.getElementById('interrogate-char-name').textContent  = stranger.name;
+      document.getElementById('interrogate-char-label').textContent = stranger.label;
+
+      const answerPanel = document.getElementById('interrogate-answer-panel');
+      const remainingEl = document.getElementById('interrogate-remaining');
+      const questionsEl = document.getElementById('interrogate-questions');
+
+      answerPanel.style.opacity = '0';
+      answerPanel.textContent   = '';
+      remainingEl.textContent   = `${leftCount} question${leftCount === 1 ? '' : 's'} remaining`;
+
+      questionsEl.innerHTML = '';
+      INTERROGATION_QUESTIONS.forEach((q, qi) => {
+        const btn     = document.createElement('button');
+        btn.className = 'iq-btn';
+        const wasAsked = asked.includes(qi);
+
+        if (wasAsked) {
+          btn.classList.add('used');
+          btn.textContent = '→ ' + q;
+        } else if (usedCount >= 3) {
+          btn.classList.add('exhausted');
+          btn.textContent = q;
+        } else {
+          btn.textContent = q;
+          btn.addEventListener('click', () => {
+            playClick();
+            interrogateState.questionsAsked[index].push(qi);
+            interrogateState.answersGiven[index].push(qi);
+
+            // Fade answer in
+            answerPanel.style.opacity = '0';
+            setTimeout(() => {
+              answerPanel.textContent   = stranger.answers[qi];
+              answerPanel.style.opacity = '1';
+            }, 300);
+
+            // Mark button used
+            btn.classList.add('used');
+            btn.textContent         = '→ ' + q;
+            btn.style.pointerEvents = 'none';
+
+            // Update remaining counter
+            const newLeft = 3 - interrogateState.questionsAsked[index].length;
+            remainingEl.textContent = `${newLeft} question${newLeft === 1 ? '' : 's'} remaining`;
+
+            // Exhaust unasked buttons if limit reached
+            if (interrogateState.questionsAsked[index].length >= 3) {
+              questionsEl.querySelectorAll('.iq-btn:not(.used)').forEach(b => b.classList.add('exhausted'));
+            }
+          });
+        }
+
+        questionsEl.appendChild(btn);
+      });
+    }
+
+    function enterInterrogateSection() {
+      inInterrogateMode = true;
+      interrogateState.strangerIndex = 0;
+      interrogateState.questionsAsked = SESSION_STRANGERS.map(() => []);
+      interrogateState.answersGiven   = SESSION_STRANGERS.map(() => []);
+
+      introSection.classList.remove('visible');
+      interrogateSection.classList.add('visible');
+
+      renderInterrogateStranger(0);
+
+      arrowBtn.classList.add('show');
+      interrogateTooltip.textContent = 'Next stranger →';
+      interrogateTooltip.classList.add('show');
+    }
+
+    function advanceInterrogate() {
+      if (interrogateState.strangerIndex < SESSION_STRANGERS.length - 1) {
+        interrogateState.strangerIndex++;
+        renderInterrogateStranger(interrogateState.strangerIndex);
+        if (interrogateState.strangerIndex === SESSION_STRANGERS.length - 1) {
+          interrogateTooltip.textContent = 'Choose your strangers →';
+        }
+      } else {
+        exitInterrogateSection();
+      }
+    }
+
+    function exitInterrogateSection() {
+      inInterrogateMode = false;
+      interrogateSection.classList.remove('visible');
+      interrogateTooltip.classList.remove('show');
+      enterPickSection();
+    }
+
+    document.getElementById('interrogate-skip').addEventListener('click', () => {
+      playClick();
+      exitInterrogateSection();
+    });
+
+    arrowBtn.addEventListener('click', () => {
+      playClick();
+
+      /* ── Pick mode: arrow only active when 3 selected ── */
+      if (inPickMode) {
+        enterSimSection();
+        return;
+      }
+
+      /* ── Interrogate mode: advance through strangers ── */
+      if (inInterrogateMode) {
+        advanceInterrogate();
+        return;
+      }
+
+      /* ── Intro mode: advance through characters ── */
+      if (inIntroMode) {
+        introIndex++;
+        if (introIndex >= SESSION_STRANGERS.length) {
+          inIntroMode = false;
+          enterInterrogateSection();
+        } else {
+          showIntroCard(introIndex, true);
+        }
+        return;
+      }
+
+      /* ── Start audio on very first click (browser requires user gesture) ── */
+      if (!audioStarted) {
+        audioStarted = true;
+        const audio = document.getElementById('bg-audio');
+        audio.volume = 0;
+        audio.play().then(() => {
+          fadeAudioIn(audio, 0.25, 3000);
+          document.getElementById('mute-btn').style.opacity = '1';
+          document.getElementById('mute-btn').style.pointerEvents = 'all';
+        }).catch(e => console.log('Audio blocked:', e));
+      }
+
+      /* ── Homepage → concept section (first click) ── */
+      if (!inConceptMode) {
+        enterConceptSection();
+        return;
+      }
+
+      /* ── Inside concept section ── */
+      if (currentSlide < TOTAL_SLIDES - 1) {
+        clearTimeout(autoTimer);
+        goToSlide(currentSlide + 1);
+        if (currentSlide < TOTAL_SLIDES - 1) {
+          autoTimer = setTimeout(advanceSlide, AUTO_DELAY);
+        }
+      } else {
+        enterIntroSection();
+      }
+    });
+
+    /* ════════════════════════════════════════════
+       SIMULATION ENGINE
+    ════════════════════════════════════════════ */
+
+    /* ── DOM refs ── */
+    const simSection    = document.getElementById('sim-section');
+    const simPlayersEl  = document.getElementById('sim-players');
+    const simDayEl      = document.getElementById('sim-day');
+    const simPhaseEl    = document.getElementById('sim-phase');
+    const simFishCountEl= document.getElementById('sim-fish-count');
+    const simLogEl      = document.getElementById('sim-log');
+    const simEndEl      = document.getElementById('sim-end');
+    const simPondSVG    = document.getElementById('sim-pond-svg');
+    const simPondCircle = document.getElementById('sim-pond-circle');
+
+    /* ── Sim state ── */
+    let simRunning = false;
+    let simFish    = 12;
+    let pondDots   = [];   // { el: SVGCircle, alive: bool }
+    let simPlayers = [];
+    let logLines   = [];
+
+    /* ────────────────────────────────────────
+       HELPERS
+    ──────────────────────────────────────── */
+    function getTakeAmount(player) {
+      if (player.id === 'you' || player.type === 'pure') return 1;
+      return Math.random() < 0.7 ? 2 : 3;
+    }
+
+    function updateSimFishCount() {
+      simFishCountEl.textContent = `${simFish} fish remaining`;
+    }
+
+    function showPhase(text) {
+      simPhaseEl.style.opacity = '0';
+      setTimeout(() => {
+        simPhaseEl.textContent = text;
+        simPhaseEl.style.opacity = '1';
+      }, 180);
+    }
+
+    function addLog(text) {
+      const line = document.createElement('div');
+      line.className = 'sim-log-line';
+      line.textContent = text;
+      line.style.opacity = '0';
+      simLogEl.appendChild(line);
+      logLines.push(line);
+      requestAnimationFrame(() => {
+        line.style.opacity = '1';
+      });
+      // Fade out and remove oldest line if over 5
+      while (logLines.length > 5) {
+        const old = logLines.shift();
+        old.style.opacity = '0';
+        setTimeout(() => { if (old.parentNode) old.parentNode.removeChild(old); }, 400);
+      }
+    }
+
+    /* ────────────────────────────────────────
+       POND DOTS
+    ──────────────────────────────────────── */
+    function initPond() {
+      // Remove any existing dots
+      pondDots.forEach(d => { if (d.el.parentNode) d.el.parentNode.removeChild(d.el); });
+      pondDots = [];
+      simFish = 12;
+
+      for (let i = 0; i < 12; i++) {
+        const angle = (i * 30 - 90) * Math.PI / 180;
+        const cx = (140 + 100 * Math.cos(angle)).toFixed(1);
+        const cy = (140 + 100 * Math.sin(angle)).toFixed(1);
+
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', cx);
+        c.setAttribute('cy', cy);
+        c.setAttribute('r', '9');
+        c.setAttribute('fill', '#0a0a0a');
+        c.style.transition = 'fill 0.35s ease, opacity 0.35s ease';
+        c.style.opacity = '1';
+        simPondSVG.appendChild(c);
+        pondDots.push({ el: c, alive: true });
+      }
+
+      updateSimFishCount();
+    }
+
+    /* Remove one fish dot — flash red then fade out */
+    function removeFishDot() {
+      const alive = pondDots.filter(d => d.alive);
+      if (!alive.length) return;
+      const dot = alive[alive.length - 1];
+      dot.alive = false;
+      dot.el.setAttribute('fill', '#e74c3c');
+      setTimeout(() => { dot.el.style.opacity = '0'; }, 280);
+    }
+
+    /* Revive `count` dead dots — animate green → black, call done when finished */
+    function replenishDots(count, done) {
+      if (count <= 0) { setTimeout(done, 200); return; }
+      const dead = pondDots.filter(d => !d.alive).slice(0, count);
+      if (!dead.length)  { setTimeout(done, 200); return; }
+      dead.forEach((dot, i) => {
+        setTimeout(() => {
+          dot.alive = true;
+          dot.el.style.opacity = '1';
+          dot.el.setAttribute('fill', '#27ae60');
+          setTimeout(() => dot.el.setAttribute('fill', '#0a0a0a'), 500);
+          if (i === dead.length - 1) setTimeout(done, 650);
+        }, i * 180);
+      });
+    }
+
+    /* ────────────────────────────────────────
+       PLAYER ROW
+    ──────────────────────────────────────── */
+    function buildSimPlayerRow(players) {
+      simPlayersEl.innerHTML = '';
+      players.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'sim-player-card';
+        card.innerHTML = `
+          <span class="spc-name">${p.name}</span>
+          ${p.label ? `<span class="spc-label">${p.label}</span>` : ''}
+        `;
+        simPlayersEl.appendChild(card);
+      });
+    }
+
+    /* ────────────────────────────────────────
+       DAY LOOP
+    ──────────────────────────────────────── */
+    function runDay(dayNum) {
+      if (!simRunning) return;
+      simDayEl.textContent = `Day ${dayNum}`;
+      showPhase('Morning. Everyone takes their fish.');
+
+      let pi = 0;
+
+      function nextPlayer() {
+        if (!simRunning) return;
+
+        // Collapse check before each player
+        if (simFish <= 0) { setTimeout(() => endSim('collapse'), 600); return; }
+
+        if (pi >= simPlayers.length) {
+          // All players done — pause then run night
+          setTimeout(runNight, 1500);
+          return;
+        }
+
+        const player = simPlayers[pi++];
+        const take = Math.min(getTakeAmount(player), simFish);
+
+        for (let f = 0; f < take; f++) removeFishDot();
+        simFish -= take;
+        updateSimFishCount();
+        addLog(`${player.name} takes ${take} fish.`);
+
+        if (simFish <= 0) {
+          setTimeout(() => endSim('collapse'), 900);
+          return;
+        }
+
+        setTimeout(nextPlayer, 800);
+      }
+
+      function runNight() {
+        if (!simRunning) return;
+        showPhase('Night. The pond replenishes.');
+
+        const newFish = Math.min(Math.floor(simFish / 2), 12 - simFish);
+
+        replenishDots(newFish, () => {
+          simFish += newFish;
+          updateSimFishCount();
+          addLog(`The pond grew by ${newFish} fish. ${simFish} fish remain.`);
+
+          if (dayNum >= 30) {
+            setTimeout(() => endSim('survive'), 1200);
+          } else {
+            setTimeout(() => runDay(dayNum + 1), 1200);
+          }
+        });
+      }
+
+      nextPlayer();
+    }
+
+    /* ────────────────────────────────────────
+       ENDING
+    ──────────────────────────────────────── */
+    function endSim(outcome) {
+      simRunning = false;
+      const isCollapse = outcome === 'collapse';
+
+      // Animate pond
+      if (isCollapse) {
+        simPondCircle.setAttribute('fill', '#c0392b'); // fill red over 1.5s (CSS transition)
+      } else {
+        simPondCircle.style.transition = 'fill 0.8s ease';
+        simPondCircle.setAttribute('fill', 'rgba(245,200,0,0.55)');
+      }
+
+      // After 2s, show ending overlay
+      setTimeout(() => {
+        const bg  = isCollapse ? '#0a0a0a' : '#f5c800';
+        const col = isCollapse ? '#f0ece0' : '#0a0a0a';
+
+        simEndEl.style.background = bg;
+        simEndEl.classList.add('visible');
+
+        const endLines = document.getElementById('end-lines');
+        endLines.innerHTML = '';
+
+        const mainLines = isCollapse
+          ? [
+              { text: 'The commons is dead.',                    cls: 'end-heading' },
+              { text: 'Nobody broke the rule on purpose.',        cls: 'end-body' },
+              { text: 'Nobody had to.',                          cls: 'end-body' },
+              { text: 'This is the Tragedy of the Commons.',      cls: 'end-body' },
+            ]
+          : [
+              { text: 'The commons survived.',                    cls: 'end-heading' },
+              { text: 'You got lucky with who you chose.',        cls: 'end-body' },
+              { text: 'But luck is not a governance system.',     cls: 'end-body' },
+              { text: 'The design was always the problem.',       cls: 'end-body' },
+            ];
+
+        // Reveal main lines one at a time, 3s apart
+        mainLines.forEach((line, i) => {
+          const el = document.createElement('div');
+          el.className = `end-line ${line.cls}`;
+          el.textContent = line.text;
+          el.style.color = col;
+          el.style.opacity = '0';
+          endLines.appendChild(el);
+          setTimeout(() => { el.style.opacity = '1'; }, 600 + i * 3000);
+        });
+
+        // Final italic line — 4s after last main line
+        const finalDelay = 600 + (mainLines.length - 1) * 3000 + 4000;
+        const finalEl = document.createElement('div');
+        finalEl.className = 'end-line end-final';
+        finalEl.textContent = 'The world produces enough food to feed all 8.2 billion people on this planet. 673 million went hungry in 2024. The commons was never the problem. The design was.';
+        finalEl.style.color = col;
+        finalEl.style.opacity = '0';
+        endLines.appendChild(finalEl);
+        setTimeout(() => { finalEl.style.opacity = '1'; }, finalDelay);
+
+        // Refresh line — 3s after final line
+        const refreshEl = document.createElement('div');
+        refreshEl.className = 'end-line end-refresh';
+        refreshEl.textContent = 'Refresh to try again with different strangers.';
+        refreshEl.style.color = col;
+        refreshEl.style.opacity = '0';
+        endLines.appendChild(refreshEl);
+        setTimeout(() => { refreshEl.style.opacity = '0.55'; }, finalDelay + 3000);
+
+      }, 2000);
+    }
+
+    /* ────────────────────────────────────────
+       ENTER SIMULATION
+    ──────────────────────────────────────── */
+    function enterSimSection() {
+      inPickMode = false;
+      simRunning = true;
+
+      console.log('enter simsection is working');
+
+      // Build player list: YOU + 3 selected strangers
+      simPlayers = [
+        { id: 'you', name: 'YOU', label: '', type: 'pure' },
+        ...selectedIds.map(id => ALL_CHARACTERS.find(c => c.id === id))
+      ];
+
+      // Build player row
+      buildSimPlayerRow(simPlayers);
+
+      // Reset UI
+      simLogEl.innerHTML = '';
+      logLines = [];
+      simPhaseEl.textContent = '';
+      simDayEl.textContent = 'Day 1';
+
+      // Reset pond circle (no fill transition yet)
+      simPondCircle.style.transition = 'none';
+      simPondCircle.setAttribute('fill', 'transparent');
+      requestAnimationFrame(() => {
+        simPondCircle.style.transition = 'fill 1.5s ease';
+      });
+
+      // Reset ending overlay
+      simEndEl.classList.remove('visible');
+      document.getElementById('end-lines').innerHTML = '';
+
+      // Init fish dots
+      initPond();
+
+      // Hide pick section artifacts
+      pickSection.classList.remove('visible');
+      arrowBtn.classList.remove('show');
+      pickWarning.classList.remove('show');
+
+      // Show sim section
+      simSection.classList.add('visible');
+
+      // Start day loop after a brief pause for the fade-in
+      setTimeout(() => runDay(1), 1400);
+    }
+  </script>
+
+</body>
+</html>
